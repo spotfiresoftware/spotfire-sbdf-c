@@ -1,0 +1,44 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "spotfire-sbdf-c-1.0.1",
+  "documentNamespace": "https://spotfire.com/spdx/spotfire-sbdf-c-1.0.1/20260618T000000Z",
+  "creationInfo": {
+    "created": "2026-06-18T00:00:00Z",
+    "creators": [
+      "Organization: Cloud Software Group, Inc., Spotfire"
+    ],
+    "licenseListVersion": "3.27"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-spotfire-sbdf-c",
+      "name": "spotfire-sbdf-c",
+      "downloadLocation": "https://github.com/spotfiresoftware/spotfire-sbdf-c.git",
+      "filesAnalyzed": false,
+      "versionInfo": "1.0.1",
+      "licenseDeclared": "BSD-3-Clause",
+      "licenseConcluded": "BSD-3-Clause",
+      "supplier": "Organization:Cloud Software Group, Inc., Spotfire",
+      "primaryPackagePurpose": "LIBRARY",
+      "copyrightText": "Copyright (c) Cloud Software Group, Inc. All Rights Reserved.",
+      "description": "A C library that provides an interface to read and write files in the Spotfire Binary Data Format (SBDF).",
+      "homepage": "https://github.com/spotfiresoftware/spotfire-sbdf-c",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:github/spotfiresoftware/spotfire-sbdf-c@1.0.1"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-spotfire-sbdf-c"
+    }
+  ]
+}
