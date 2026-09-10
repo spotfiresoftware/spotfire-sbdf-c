@@ -4,6 +4,7 @@
 
 #include "valuearray.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -434,7 +435,15 @@ static int sbdf_get_rle_values(sbdf_valuearray* handle, sbdf_object** result)
 		int total = 0;
 		for (i = 0; i < handle->object1->count; ++i)
 		{
-			total += ((unsigned char *)handle->object1->data)[i] + 1;
+			int run = ((unsigned char *)handle->object1->data)[i] + 1;
+			/* the sum itself must not overflow, or it wraps back onto a small
+			   value1 and the comparison below lets the decode loop run past
+			   the allocation. */
+			if (total > INT_MAX - run)
+			{
+				return SBDF_ERROR_INVALID_SIZE;
+			}
+			total += run;
 		}
 		if (total != handle->value1 || handle->object1->count > handle->object2->count)
 		{
