@@ -221,11 +221,13 @@ int sbdf_cs_read(FILE* f, sbdf_columnslice** out)
 		{
 			goto end;
 		}
+		memset(t->properties, 0, (size_t)v * sizeof(void*));
 
 		if (error = sbdf_alloc((void**)&t->property_names, (size_t)v * sizeof(void*)))
 		{
 			goto end;
 		}
+		memset(t->property_names, 0, (size_t)v * sizeof(void*));
 
 		for (i = 0; i < v; ++i)
 		{
