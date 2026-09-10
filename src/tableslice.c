@@ -4,6 +4,7 @@
 
 #include "tableslice.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
 #include "columnslice.h"
@@ -53,12 +54,23 @@ int sbdf_ts_add(sbdf_columnslice* col, sbdf_tableslice* table)
 		return SBDF_ERROR_ARGUMENT_NULL;
 	}
 
+	/* sbdf_calculate_array_capacity grows past its argument, so both the
+	   increment and the capacity it returns can overflow. */
+	if (table->no_columns >= INT_MAX - 1)
+	{
+		return SBDF_ERROR_INVALID_SIZE;
+	}
+
 	cap = sbdf_calculate_array_capacity(table->no_columns);
 
 	if (cap == table->no_columns)
 	{
 		int new_cap = sbdf_calculate_array_capacity(1 + table->no_columns);
-		if (error = sbdf_alloc((void**)&table->columns, new_cap * sizeof(void*)))
+		if (new_cap < 0)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		if (error = sbdf_alloc((void**)&table->columns, (size_t)new_cap * sizeof(void*)))
 		{
 			return error;
 		}

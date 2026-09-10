@@ -283,10 +283,14 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 		elem_size = sbdf_get_unpacked_size(vt);
 		if (elem_size < 0)
 		{
+			free(*handle);
+			*handle = 0;
 			return elem_size;
 		}
 		else if (elem_size == 0)
 		{
+			free(*handle);
+			*handle = 0;
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
 	}
@@ -298,6 +302,7 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	if (!out)
 	{
 		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -346,7 +351,9 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	t = calloc(1, sizeof(sbdf_object));
 	if (!t)
 	{
+		free(out - packed_len);
 		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 	t->type = bytearray_vt;
@@ -354,17 +361,23 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	t->data = malloc(sizeof(void*));
 	if (!t->data)
 	{
-		free(*handle);
+		free(out - packed_len);
 		free(t);
+		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
+	/* the allocation to test is the byte array, not t->data, which was just
+	   checked above. free t->data before t, not after. */
 	*(void**)t->data = sbdf_ba_create(out - packed_len, packed_len);
-	if (!t->data)
+	if (!*(void**)t->data)
 	{
-		free(*handle);
-		free(t);
+		free(out - packed_len);
 		free(t->data);
+		free(t);
+		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -635,6 +648,16 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 					sbdf_va_destroy(*handle);
 					*handle = 0;
 					return err;
+				}
+
+				/* sbdf_va_row_cnt hands this straight back to callers sizing
+				   buffers, before anything has decoded the runs. bound it the
+				   same way the bit array branch below bounds its own count. */
+				if ((*handle)->value1 < 0 || (*handle)->value1 > 256 * 1024 * 1024)
+				{
+					sbdf_va_destroy(*handle);
+					*handle = 0;
+					return SBDF_ERROR_INVALID_SIZE;
 				}
 
 				err = sbdf_obj_read_arr(file, byte_vt, &(*handle)->object1);
