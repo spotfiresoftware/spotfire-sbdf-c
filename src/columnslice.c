@@ -207,16 +207,22 @@ int sbdf_cs_read(FILE* f, sbdf_columnslice** out)
 		goto end;
 	}
 
+	if (v > 4096)
+	{
+		error = SBDF_ERROR_INVALID_SIZE;
+		goto end;
+	}
+
 	t->prop_cnt = v;
 	/* TODO Verify that it is OK to have no properties */
 	if (v > 0)
 	{
-		if (error = sbdf_alloc((void**)&t->properties, v * sizeof(void*)))
+		if (error = sbdf_alloc((void**)&t->properties, (size_t)v * sizeof(void*)))
 		{
 			goto end;
 		}
 
-		if (error = sbdf_alloc((void**)&t->property_names, v * sizeof(void*)))
+		if (error = sbdf_alloc((void**)&t->property_names, (size_t)v * sizeof(void*)))
 		{
 			goto end;
 		}

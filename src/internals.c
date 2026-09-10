@@ -323,11 +323,11 @@ void* sbdf_copy_array(void const* src)
 	return dst;
 }
 
-int sbdf_alloc(void** inout, int sz)
+int sbdf_alloc(void** inout, size_t sz)
 {
 	void* t;
 
-	if (sz <= 0)
+	if (sz == 0)
 	{
 		return SBDF_ERROR_INVALID_SIZE;
 	}
