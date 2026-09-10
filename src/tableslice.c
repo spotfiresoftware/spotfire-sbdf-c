@@ -98,7 +98,7 @@ void sbdf_ts_destroy(sbdf_tableslice* slice)
 int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tableslice** out)
 {
 	sbdf_tableslice* t;
-	int error, v, i, column_count;
+	int error, v, i, column_count, row_cnt;
 
 	if (!meta || !out)
 	{
@@ -151,6 +151,8 @@ int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tab
 	t->table_metadata = (sbdf_tablemetadata*)meta;
 	t->no_columns = column_count;
 
+	row_cnt = -1;
+
 	for (i = 0; i < t->no_columns; ++i)
 	{
 		if (!subset || subset[i])
@@ -163,6 +165,26 @@ int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tab
 				 slice_vt.id != meta_vt.id))
 			{
 				error = SBDF_ERROR_VALUETYPES_MUST_BE_EQUAL;
+			}
+
+			/* every column slice of a table slice must describe the same rows.
+			   otherwise a consumer that derives a copy length from one column
+			   reads past the end of a shorter one. */
+			if (!error)
+			{
+				int cnt = sbdf_cs_row_cnt((sbdf_columnslice*)t->columns[i]);
+				if (cnt < 0)
+				{
+					error = cnt;
+				}
+				else if (row_cnt < 0)
+				{
+					row_cnt = cnt;
+				}
+				else if (cnt != row_cnt)
+				{
+					error = SBDF_ERROR_ROW_COUNT_MISMATCH;
+				}
 			}
 		}
 		else
