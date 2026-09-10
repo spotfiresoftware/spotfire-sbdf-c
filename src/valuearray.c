@@ -611,6 +611,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 			if (handle)
 			{
 				sbdf_va_destroy(*handle);
+				*handle = 0;
 			}
 			return err;
 		}
@@ -623,6 +624,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (err)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return err;
 				}
 
@@ -638,6 +640,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -656,6 +659,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -672,6 +676,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -686,6 +691,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return SBDF_ERROR_INVALID_SIZE;
 			}
@@ -698,6 +704,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (!buf)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return SBDF_ERROR_OUT_OF_MEMORY;
 				}
 
@@ -705,6 +712,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				{
 					free(buf);
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return SBDF_ERROR_IO;
 				}
 				err = sbdf_obj_create(bytearray_vt, &buf, &packed_size, &(*handle)->object1);
@@ -720,6 +728,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
