@@ -260,7 +260,7 @@ static int sbdf_read_objects(FILE* f, sbdf_valuetype v, int count, sbdf_object**
 				return err;
 			}
 
-			if (length < 0)
+			if (length < 0 || length > 64 * 1024 * 1024)
 			{
 				sbdf_obj_destroy(t);
 				return SBDF_ERROR_INVALID_SIZE;

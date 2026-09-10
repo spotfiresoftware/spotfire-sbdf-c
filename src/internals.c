@@ -184,7 +184,7 @@ int sbdf_read_string(FILE* f, char** s)
 		return error;
 	}
 
-	if (l < 0)
+	if (l < 0 || l > 64 * 1024 * 1024)
 	{
 		return SBDF_ERROR_INVALID_SIZE;
 	}

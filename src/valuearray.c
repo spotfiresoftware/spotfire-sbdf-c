@@ -672,6 +672,15 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				(*handle)->value1 = v;
 			}
 
+			if (v < 0 || v > 256 * 1024 * 1024)
+			{
+				if (handle)
+				{
+					sbdf_va_destroy(*handle);
+				}
+				return SBDF_ERROR_INVALID_SIZE;
+			}
+
 			/* just read the raw byte stream */
 			packed_size = v / 8 + !!(v%8);
 			if (handle)
