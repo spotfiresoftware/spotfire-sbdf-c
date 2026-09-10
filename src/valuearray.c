@@ -584,6 +584,15 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 		return err;
 	}
 
+	/* a bit array always decodes to one byte per element and reports itself as
+	   bool, whatever the header claims the type is. accepting any other type
+	   here hands the caller an object whose element width does not match the
+	   type it asked for. the writer only ever emits bool bit arrays. */
+	if (e == SBDF_BITARRAYENCODINGTYPEID && vt.id != SBDF_BOOLTYPEID)
+	{
+		return SBDF_ERROR_UNKNOWN_VALUEARRAY_ENCODING;
+	}
+
 	if (handle)
 	{
 		*handle = calloc(sizeof(sbdf_valuearray), 1);
