@@ -818,6 +818,16 @@ int sbdf_va_create_dflt(sbdf_object const* array, sbdf_valuearray** handle)
 	}
 }
 
+int sbdf_va_get_type(sbdf_valuearray* in, sbdf_valuetype* out)
+{
+	if (!in || !out)
+	{
+		return SBDF_ERROR_ARGUMENT_NULL;
+	}
+	*out = in->valuetype;
+	return SBDF_OK;
+}
+
 int sbdf_va_row_cnt(sbdf_valuearray* in)
 {
 	if (!in)

@@ -11,6 +11,8 @@
 #include "tableslice_io.h"
 #include "metadata.h"
 #include "tablemetadata.h"
+#include "columnmetadata.h"
+#include "valuearray.h"
 #include "errors.h"
 #include "sectiontypeid.h"
 #include "sectiontypeid_io.h"
@@ -153,7 +155,15 @@ int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tab
 	{
 		if (!subset || subset[i])
 		{
+			sbdf_valuetype meta_vt, slice_vt;
 			error = sbdf_cs_read(f, t->columns + i);
+			if (!error &&
+				(sbdf_cm_get_type(meta->column_metadata[i], &meta_vt) != SBDF_OK ||
+				 sbdf_va_get_type(((sbdf_columnslice*)t->columns[i])->values, &slice_vt) != SBDF_OK ||
+				 slice_vt.id != meta_vt.id))
+			{
+				error = SBDF_ERROR_VALUETYPES_MUST_BE_EQUAL;
+			}
 		}
 		else
 		{
