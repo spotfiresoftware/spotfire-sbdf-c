@@ -428,6 +428,20 @@ static int sbdf_get_rle_values(sbdf_valuearray* handle, sbdf_object** result)
 		return SBDF_ERROR_UNKNOWN_TYPEID;
 	}
 
+	/* Validate: sum of decoded elements must equal declared count, and run count must not
+	   exceed value count (prevents heap OOB write and secondary over-read). */
+	{
+		int total = 0;
+		for (i = 0; i < handle->object1->count; ++i)
+		{
+			total += ((unsigned char *)handle->object1->data)[i] + 1;
+		}
+		if (total != handle->value1 || handle->object1->count > handle->object2->count)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+	}
+
 	if (!(t = calloc(1, sizeof(sbdf_object))))
 	{
 		return SBDF_ERROR_OUT_OF_MEMORY;
