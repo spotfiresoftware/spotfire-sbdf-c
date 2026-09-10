@@ -2,6 +2,7 @@
    This file is subject to the license terms contained in the
    license file that is distributed with this file. */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -302,7 +303,12 @@ static int sbdf_read_objects(FILE* f, sbdf_valuetype v, int count, sbdf_object**
 			sbdf_obj_destroy(t);
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
-		t->data = malloc(sz * count);
+		if (count > 0 && (size_t)count > (size_t)INT_MAX / (size_t)sz)
+		{
+			sbdf_obj_destroy(t);
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		t->data = malloc((size_t)sz * (size_t)count);
 		if (!t->data)
 		{
 			sbdf_obj_destroy(t);

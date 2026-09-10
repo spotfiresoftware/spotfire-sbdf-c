@@ -449,7 +449,7 @@ static int sbdf_get_rle_values(sbdf_valuearray* handle, sbdf_object** result)
 	t->type = handle->object2->type;
 	t->count = elem_cnt = handle->value1;
 
-	if (!(t->data = malloc(elem_size * elem_cnt)))
+	if (!(t->data = malloc((size_t)elem_size * (size_t)elem_cnt)))
 	{
 		sbdf_obj_destroy(t);
 		return SBDF_ERROR_OUT_OF_MEMORY;
