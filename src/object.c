@@ -555,6 +555,13 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 				return err;
 			}
 
+			/* a negative length seeks backwards, which lets a crafted file
+			   rewind the parser onto data it has already consumed. */
+			if (skip < 0)
+			{
+				return SBDF_ERROR_INVALID_SIZE;
+			}
+
 			if (fseek(f, skip, SEEK_CUR))
 			{
 				return SBDF_ERROR_IO;
@@ -567,6 +574,11 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 				if (err = sbdf_read_int32(f, &skip))
 				{
 					return err;
+				}
+
+				if (skip < 0)
+				{
+					return SBDF_ERROR_INVALID_SIZE;
 				}
 
 				if (fseek(f, skip, SEEK_CUR))
@@ -587,7 +599,12 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 		{
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
-		if (fseek(f, c * sz, SEEK_CUR))
+		/* c * sz overflows int for large counts, and fseek takes a long. */
+		if (c > LONG_MAX / sz)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		if (fseek(f, (long)c * sz, SEEK_CUR))
 		{
 			return SBDF_ERROR_IO;
 		}
