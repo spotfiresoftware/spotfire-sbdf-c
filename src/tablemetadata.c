@@ -453,13 +453,17 @@ struct metadata_sort
 	int order;
 };
 
-static int compare_metadata_sort_by_order(struct metadata_sort const* lhs, struct metadata_sort const* rhs)
+static int compare_metadata_sort_by_order(void const* lhs_, void const* rhs_)
 {
+	struct metadata_sort const* lhs = (struct metadata_sort const*)lhs_;
+	struct metadata_sort const* rhs = (struct metadata_sort const*)rhs_;
 	return lhs->order - rhs->order;
 }
 
-static int compare_metadata_sort_by_name(struct metadata_sort const* lhs, struct metadata_sort const* rhs)
+static int compare_metadata_sort_by_name(void const* lhs_, void const* rhs_)
 {
+	struct metadata_sort const* lhs = (struct metadata_sort const*)lhs_;
+	struct metadata_sort const* rhs = (struct metadata_sort const*)rhs_;
 	int name_diff = strcmp(lhs->meta->name, rhs->meta->name);
 	if (name_diff)
 	{
