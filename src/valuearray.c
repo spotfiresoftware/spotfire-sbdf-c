@@ -4,6 +4,7 @@
 
 #include "valuearray.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -282,10 +283,14 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 		elem_size = sbdf_get_unpacked_size(vt);
 		if (elem_size < 0)
 		{
+			free(*handle);
+			*handle = 0;
 			return elem_size;
 		}
 		else if (elem_size == 0)
 		{
+			free(*handle);
+			*handle = 0;
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
 	}
@@ -297,6 +302,7 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	if (!out)
 	{
 		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -345,7 +351,9 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	t = calloc(1, sizeof(sbdf_object));
 	if (!t)
 	{
+		free(out - packed_len);
 		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 	t->type = bytearray_vt;
@@ -353,17 +361,23 @@ int sbdf_va_create_bit(sbdf_object const* array, sbdf_valuearray** handle)
 	t->data = malloc(sizeof(void*));
 	if (!t->data)
 	{
-		free(*handle);
+		free(out - packed_len);
 		free(t);
+		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
+	/* the allocation to test is the byte array, not t->data, which was just
+	   checked above. free t->data before t, not after. */
 	*(void**)t->data = sbdf_ba_create(out - packed_len, packed_len);
-	if (!t->data)
+	if (!*(void**)t->data)
 	{
-		free(*handle);
-		free(t);
+		free(out - packed_len);
 		free(t->data);
+		free(t);
+		free(*handle);
+		*handle = 0;
 		return SBDF_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -428,6 +442,28 @@ static int sbdf_get_rle_values(sbdf_valuearray* handle, sbdf_object** result)
 		return SBDF_ERROR_UNKNOWN_TYPEID;
 	}
 
+	/* Validate: sum of decoded elements must equal declared count, and run count must not
+	   exceed value count (prevents heap OOB write and secondary over-read). */
+	{
+		int total = 0;
+		for (i = 0; i < handle->object1->count; ++i)
+		{
+			int run = ((unsigned char *)handle->object1->data)[i] + 1;
+			/* the sum itself must not overflow, or it wraps back onto a small
+			   value1 and the comparison below lets the decode loop run past
+			   the allocation. */
+			if (total > INT_MAX - run)
+			{
+				return SBDF_ERROR_INVALID_SIZE;
+			}
+			total += run;
+		}
+		if (total != handle->value1 || handle->object1->count > handle->object2->count)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+	}
+
 	if (!(t = calloc(1, sizeof(sbdf_object))))
 	{
 		return SBDF_ERROR_OUT_OF_MEMORY;
@@ -435,7 +471,7 @@ static int sbdf_get_rle_values(sbdf_valuearray* handle, sbdf_object** result)
 	t->type = handle->object2->type;
 	t->count = elem_cnt = handle->value1;
 
-	if (!(t->data = malloc(elem_size * elem_cnt)))
+	if (!(t->data = malloc((size_t)elem_size * (size_t)elem_cnt)))
 	{
 		sbdf_obj_destroy(t);
 		return SBDF_ERROR_OUT_OF_MEMORY;
@@ -561,6 +597,15 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 		return err;
 	}
 
+	/* a bit array always decodes to one byte per element and reports itself as
+	   bool, whatever the header claims the type is. accepting any other type
+	   here hands the caller an object whose element width does not match the
+	   type it asked for. the writer only ever emits bool bit arrays. */
+	if (e == SBDF_BITARRAYENCODINGTYPEID && vt.id != SBDF_BOOLTYPEID)
+	{
+		return SBDF_ERROR_UNKNOWN_VALUEARRAY_ENCODING;
+	}
+
 	if (handle)
 	{
 		*handle = calloc(sizeof(sbdf_valuearray), 1);
@@ -588,6 +633,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 			if (handle)
 			{
 				sbdf_va_destroy(*handle);
+				*handle = 0;
 			}
 			return err;
 		}
@@ -600,7 +646,18 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (err)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return err;
+				}
+
+				/* sbdf_va_row_cnt hands this straight back to callers sizing
+				   buffers, before anything has decoded the runs. bound it the
+				   same way the bit array branch below bounds its own count. */
+				if ((*handle)->value1 < 0 || (*handle)->value1 > 256 * 1024 * 1024)
+				{
+					sbdf_va_destroy(*handle);
+					*handle = 0;
+					return SBDF_ERROR_INVALID_SIZE;
 				}
 
 				err = sbdf_obj_read_arr(file, byte_vt, &(*handle)->object1);
@@ -615,6 +672,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -633,6 +691,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -649,6 +708,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -656,6 +716,16 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 			if (handle)
 			{
 				(*handle)->value1 = v;
+			}
+
+			if (v < 0 || v > 256 * 1024 * 1024)
+			{
+				if (handle)
+				{
+					sbdf_va_destroy(*handle);
+					*handle = 0;
+				}
+				return SBDF_ERROR_INVALID_SIZE;
 			}
 
 			/* just read the raw byte stream */
@@ -666,6 +736,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (!buf)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return SBDF_ERROR_OUT_OF_MEMORY;
 				}
 
@@ -673,6 +744,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				{
 					free(buf);
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 					return SBDF_ERROR_IO;
 				}
 				err = sbdf_obj_create(bytearray_vt, &buf, &packed_size, &(*handle)->object1);
@@ -688,6 +760,7 @@ static int sbdf_read_valuearray_int(FILE* file, sbdf_valuearray** handle)
 				if (handle)
 				{
 					sbdf_va_destroy(*handle);
+					*handle = 0;
 				}
 				return err;
 			}
@@ -793,6 +866,16 @@ int sbdf_va_create_dflt(sbdf_object const* array, sbdf_valuearray** handle)
 	{
 		return sbdf_va_create_plain(array, handle);
 	}
+}
+
+int sbdf_va_get_type(sbdf_valuearray* in, sbdf_valuetype* out)
+{
+	if (!in || !out)
+	{
+		return SBDF_ERROR_ARGUMENT_NULL;
+	}
+	*out = in->valuetype;
+	return SBDF_OK;
 }
 
 int sbdf_va_row_cnt(sbdf_valuearray* in)

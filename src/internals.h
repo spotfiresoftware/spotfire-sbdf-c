@@ -81,7 +81,7 @@ extern void* sbdf_copy_array(void const* src);
 extern int sbdf_init_array_dontclone(struct sbdf_valuetype type, int count, void const* data, struct sbdf_object** out);
 
 /* allocates / reallocates the given amount of memory */
-extern int sbdf_alloc(void** inout, int sz);
+extern int sbdf_alloc(void** inout, size_t sz);
 
 /* determines if the type index is an array type index */
 extern int sbdf_ti_is_arr(int);

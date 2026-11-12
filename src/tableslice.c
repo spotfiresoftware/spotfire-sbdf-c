@@ -4,6 +4,7 @@
 
 #include "tableslice.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
 #include "columnslice.h"
@@ -11,6 +12,8 @@
 #include "tableslice_io.h"
 #include "metadata.h"
 #include "tablemetadata.h"
+#include "columnmetadata.h"
+#include "valuearray.h"
 #include "errors.h"
 #include "sectiontypeid.h"
 #include "sectiontypeid_io.h"
@@ -51,12 +54,23 @@ int sbdf_ts_add(sbdf_columnslice* col, sbdf_tableslice* table)
 		return SBDF_ERROR_ARGUMENT_NULL;
 	}
 
+	/* sbdf_calculate_array_capacity grows past its argument, so both the
+	   increment and the capacity it returns can overflow. */
+	if (table->no_columns >= INT_MAX - 1)
+	{
+		return SBDF_ERROR_INVALID_SIZE;
+	}
+
 	cap = sbdf_calculate_array_capacity(table->no_columns);
 
 	if (cap == table->no_columns)
 	{
 		int new_cap = sbdf_calculate_array_capacity(1 + table->no_columns);
-		if (error = sbdf_alloc((void**)&table->columns, new_cap * sizeof(void*)))
+		if (new_cap < 0)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		if (error = sbdf_alloc((void**)&table->columns, (size_t)new_cap * sizeof(void*)))
 		{
 			return error;
 		}
@@ -96,7 +110,7 @@ void sbdf_ts_destroy(sbdf_tableslice* slice)
 int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tableslice** out)
 {
 	sbdf_tableslice* t;
-	int error, v, i, column_count;
+	int error, v, i, column_count, row_cnt;
 
 	if (!meta || !out)
 	{
@@ -149,11 +163,41 @@ int sbdf_ts_read(FILE* f, sbdf_tablemetadata const* meta, char* subset, sbdf_tab
 	t->table_metadata = (sbdf_tablemetadata*)meta;
 	t->no_columns = column_count;
 
+	row_cnt = -1;
+
 	for (i = 0; i < t->no_columns; ++i)
 	{
 		if (!subset || subset[i])
 		{
+			sbdf_valuetype meta_vt, slice_vt;
 			error = sbdf_cs_read(f, t->columns + i);
+			if (!error &&
+				(sbdf_cm_get_type(meta->column_metadata[i], &meta_vt) != SBDF_OK ||
+				 sbdf_va_get_type(((sbdf_columnslice*)t->columns[i])->values, &slice_vt) != SBDF_OK ||
+				 slice_vt.id != meta_vt.id))
+			{
+				error = SBDF_ERROR_VALUETYPES_MUST_BE_EQUAL;
+			}
+
+			/* every column slice of a table slice must describe the same rows.
+			   otherwise a consumer that derives a copy length from one column
+			   reads past the end of a shorter one. */
+			if (!error)
+			{
+				int cnt = sbdf_cs_row_cnt((sbdf_columnslice*)t->columns[i]);
+				if (cnt < 0)
+				{
+					error = cnt;
+				}
+				else if (row_cnt < 0)
+				{
+					row_cnt = cnt;
+				}
+				else if (cnt != row_cnt)
+				{
+					error = SBDF_ERROR_ROW_COUNT_MISMATCH;
+				}
+			}
 		}
 		else
 		{

@@ -2,6 +2,7 @@
    This file is subject to the license terms contained in the
    license file that is distributed with this file. */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -259,7 +260,7 @@ static int sbdf_read_objects(FILE* f, sbdf_valuetype v, int count, sbdf_object**
 				return err;
 			}
 
-			if (length < 0)
+			if (length < 0 || length > 64 * 1024 * 1024)
 			{
 				sbdf_obj_destroy(t);
 				return SBDF_ERROR_INVALID_SIZE;
@@ -302,7 +303,12 @@ static int sbdf_read_objects(FILE* f, sbdf_valuetype v, int count, sbdf_object**
 			sbdf_obj_destroy(t);
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
-		t->data = malloc(sz * count);
+		if (count > 0 && (size_t)count > (size_t)INT_MAX / (size_t)sz)
+		{
+			sbdf_obj_destroy(t);
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		t->data = malloc((size_t)sz * (size_t)count);
 		if (!t->data)
 		{
 			sbdf_obj_destroy(t);
@@ -549,6 +555,13 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 				return err;
 			}
 
+			/* a negative length seeks backwards, which lets a crafted file
+			   rewind the parser onto data it has already consumed. */
+			if (skip < 0)
+			{
+				return SBDF_ERROR_INVALID_SIZE;
+			}
+
 			if (fseek(f, skip, SEEK_CUR))
 			{
 				return SBDF_ERROR_IO;
@@ -561,6 +574,11 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 				if (err = sbdf_read_int32(f, &skip))
 				{
 					return err;
+				}
+
+				if (skip < 0)
+				{
+					return SBDF_ERROR_INVALID_SIZE;
 				}
 
 				if (fseek(f, skip, SEEK_CUR))
@@ -581,7 +599,12 @@ static int sbdf_skip_objects(FILE* f, sbdf_valuetype v, int c, int packed_array)
 		{
 			return SBDF_ERROR_UNKNOWN_TYPEID;
 		}
-		if (fseek(f, c * sz, SEEK_CUR))
+		/* c * sz overflows int for large counts, and fseek takes a long. */
+		if (c > LONG_MAX / sz)
+		{
+			return SBDF_ERROR_INVALID_SIZE;
+		}
+		if (fseek(f, (long)c * sz, SEEK_CUR))
 		{
 			return SBDF_ERROR_IO;
 		}

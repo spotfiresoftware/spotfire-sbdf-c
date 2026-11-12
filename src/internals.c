@@ -184,7 +184,7 @@ int sbdf_read_string(FILE* f, char** s)
 		return error;
 	}
 
-	if (l < 0)
+	if (l < 0 || l > 64 * 1024 * 1024)
 	{
 		return SBDF_ERROR_INVALID_SIZE;
 	}
@@ -323,11 +323,11 @@ void* sbdf_copy_array(void const* src)
 	return dst;
 }
 
-int sbdf_alloc(void** inout, int sz)
+int sbdf_alloc(void** inout, size_t sz)
 {
 	void* t;
 
-	if (sz <= 0)
+	if (sz == 0)
 	{
 		return SBDF_ERROR_INVALID_SIZE;
 	}

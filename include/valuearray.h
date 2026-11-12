@@ -48,6 +48,9 @@ SBDF_API int sbdf_va_get_values(sbdf_valuearray* input, sbdf_object** result);
 /* returns the number of rows stored in the value array */
 SBDF_API int sbdf_va_row_cnt(sbdf_valuearray* in);
 
+/* returns the value type of the value array */
+SBDF_API int sbdf_va_get_type(sbdf_valuearray* in, struct sbdf_valuetype* out);
+
 #ifdef __cplusplus
 }
 #endif
